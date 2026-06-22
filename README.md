@@ -29,6 +29,54 @@ Real-Time-Chat-Application-C-CPP/
 
 ## How It Works
 
+## Architecture
+```
++---------------------------+
+        |     Listening Socket      |
+        |        TCP :PORT          |
+        +-------------+-------------+
+                      |
+                      |  new connection
+                      v
+        +---------------------------+
+        |       select() Loop       |
+        |     monitors all fds      |
+        +---+-------------------+---+
+            |                   |
+            |                   |
+            v                   v
+    +-----------------+   +-----------+
+    |  New connection |   | Client fd |
+    |  accept()       |   | has data  |
+    +-------+---------+   +-----+-----+
+            |                   |
+            v                   v
+    +-----------------+   +-----------+
+    | Add to          |   | recv()    |
+    | client_fds[]    |   | message   |
+    +-----------------+   +-----+-----+
+                                |
+                                |  "name: message"
+                                v
+                    +-----------------------+
+                    |   Broadcast Engine    |
+                    |  send() to all other  |
+                    |  client_fds[]         |
+                    +-----------+-----------+
+                                |
+               +----------------+----------------+
+               |                |                |
+               v                v                v
+       +------------+   +------------+   +------------+
+       |  Client A  |   |  Client B  |   |  Client C  |
+       |   fd = 4   |   |   fd = 5   |   |   fd = 6   |
+       +------------+   +------------+   +------------+
+
+   Disconnect handling:
+   recv() == 0  -->  close(fd)  -->  client_fds[i] = -1
+
+```
+
 ### Server
 
 - Maintains an array of connected client file descriptors (`client_fds[]`)
